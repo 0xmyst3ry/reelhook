@@ -1,4 +1,4 @@
-from .detector import check, Report
+from .detector import Report, check, check_email
 
-__all__ = ["check", "Report"]
-__version__ = "0.1.0"
+__all__ = ["check", "check_email", "Report"]
+__version__ = "0.2.0"

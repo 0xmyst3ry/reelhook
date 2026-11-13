@@ -1,0 +1,8 @@
+From: "GitHub" <noreply@github.com>
+To: dev@example.com
+Subject: [GitHub] A new SSH key was added to your account
+Authentication-Results: mx.example.com; spf=pass; dkim=pass; dmarc=pass
+Content-Type: text/plain; charset=utf-8
+
+Hi dev, a new SSH key was added to your account. If you did this, no action is needed.
+Review your keys at https://github.com/settings/keys

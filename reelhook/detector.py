@@ -1,22 +1,8 @@
 from dataclasses import dataclass, field
 
-from .data import generate
+from .emailscan import EmailReport, analyze_email
+from .ensemble import Ensemble, default_model
 from .htmlscan import analyze
-from .model import LogisticRegression
-from .urlfeatures import FEATURE_NAMES, vector
-
-_DEFAULT = None
-
-
-def default_model() -> LogisticRegression:
-    """Train on the bundled synthetic corpus (deterministic, ~1s)."""
-    global _DEFAULT
-    if _DEFAULT is None:
-        rows = generate(3000, seed=1)
-        X = [vector(u) for u, _ in rows]
-        y = [l for _, l in rows]
-        _DEFAULT = LogisticRegression(FEATURE_NAMES).fit(X, y, epochs=60)
-    return _DEFAULT
 
 
 @dataclass
@@ -26,23 +12,31 @@ class Report:
     verdict: str  # safe | suspicious | phishing
     url_score: float
     reasons: list[str] = field(default_factory=list)
+    models: dict = field(default_factory=dict)
 
     def to_dict(self):
         return {"url": self.url, "score": round(self.score, 3), "verdict": self.verdict,
-                "url_score": round(self.url_score, 3), "reasons": self.reasons}
+                "url_score": round(self.url_score, 3), "models": {k: round(v, 3) for k, v in self.models.items()},
+                "reasons": self.reasons}
 
 
-def check(url: str, html: str | None = None, model: LogisticRegression | None = None) -> Report:
+def check(url: str, html: str | None = None, model: Ensemble | None = None) -> Report:
+    """Score a URL, and optionally the page behind it. Signals combine with noisy-OR."""
     model = model or default_model()
-    x = vector(url)
-    p_url = model.predict_proba(x)
-    reasons = [f"{n} ({c:+.2f})" for n, c in model.explain(x) if abs(c) > 0.15 and c > 0]
-
+    probs = model.probs(url)
+    p_url = (probs["gbdt"] + probs["ngram"] + probs["lr"]) / 3
+    reasons = [f"{n.replace('_', ' ')} (+{c:.1f})" for n, c in model.explain(url)]
     miss = 1 - p_url
     if html is not None:
         for s in analyze(html, url):
             miss *= 1 - s.weight
             reasons.append(f"[{s.id}] {s.note}")
     score = 1 - miss
-    verdict = "phishing" if score >= 0.75 else "suspicious" if score >= 0.45 else "safe"
-    return Report(url, score, verdict, p_url, reasons)
+    t = model.thresholds
+    verdict = "phishing" if score >= t["phishing"] else "suspicious" if score >= t["suspicious"] else "safe"
+    return Report(url, score, verdict, p_url, reasons, probs)
+
+
+def check_email(raw, model: Ensemble | None = None) -> EmailReport:
+    model = model or default_model()
+    return analyze_email(raw, lambda u: check(u, model=model))

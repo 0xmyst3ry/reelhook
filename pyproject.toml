@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reelhook"
+version = "0.2.0"
+description = "Phishing detection for URLs, pages and emails: homoglyph and brand-squatting analysis, gradient-boosted trees and n-gram models written from scratch"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+keywords = ["phishing", "security", "machine-learning", "gradient-boosting", "homoglyph", "email-security"]
+dependencies = []
+
+[project.scripts]
+reelhook = "reelhook.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["reelhook*"]
+
+[tool.setuptools.package-data]
+reelhook = ["model.json"]

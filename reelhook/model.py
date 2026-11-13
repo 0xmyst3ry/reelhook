@@ -98,3 +98,20 @@ def auc(y_true, p) -> float:
         rank_sum += avg * sum(1 for k in range(i, j) if pairs[k][1] == 1)
         i = j
     return (rank_sum - pos * (pos + 1) / 2) / (pos * neg)
+
+
+def tpr_at_fpr(y_true, p, target_fpr=0.01) -> float:
+    """Recall achievable while keeping the false-positive rate at or below `target_fpr`."""
+    neg = sorted((q for t, q in zip(y_true, p) if t == 0), reverse=True)
+    pos = [q for t, q in zip(y_true, p) if t == 1]
+    if not neg or not pos:
+        return 0.0
+    allowed = int(target_fpr * len(neg))
+    thr = neg[allowed] if allowed < len(neg) else 0.0   # scores strictly above thr stay within the FPR budget
+    return sum(1 for q in pos if q > thr) / len(pos)
+
+
+def threshold_at_fpr(y_true, p, target_fpr=0.01) -> float:
+    neg = sorted((q for t, q in zip(y_true, p) if t == 0), reverse=True)
+    allowed = int(target_fpr * len(neg))
+    return neg[allowed] if allowed < len(neg) else 0.5
